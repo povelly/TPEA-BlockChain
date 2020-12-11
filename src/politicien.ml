@@ -24,13 +24,12 @@ let send_new_word level st =
   Option.iter
     (fun head ->
       (* Create new random word *)
-      Log.log_info "----------Poli MADE CONSENSUS AND CHOSE HEAD : %a@." Word.pp head ;
       let word =
         make_word_on_blockletters
           level
-          (List.of_seq (Hashtbl.to_seq_values st.letter_store.letters_table))
+          (List.of_seq (Hashtbl.to_seq_values st.letter_store.letters_table)) (*ici fonction de creation*)
           st.politician
-          (Word.to_bigstring head)
+          (Word.to_bigstring head) (*Afficher head ici *)
       in
       Store.add_word st.word_store word;
       (* Send letter *)
@@ -68,12 +67,14 @@ let run ?(max_iter = 0) () =
   Log.log_warn "Recupere le letter pool" ;
   let getpool = Messages.Get_full_letterpool in
   Client_utils.send_some getpool ;
-  let letterpool =
+
+
+  let rec wait_for_letterpool (): Messages.letterpool =
     match Client_utils.receive () with
-    | Messages.Full_letterpool letterpool -> letterpool
-    | _ -> assert false
-  in
-  
+      | Messages.Full_letterpool letterpool -> letterpool
+      | _ -> wait_for_letterpool ()
+  in    
+  let letterpool = wait_for_letterpool () in
 
   (* Generate initial letterpool *)
   let storeletter = Store.init_letters () in

@@ -9,7 +9,12 @@ let make_letter_on_block sk pk level block letter : letter =
   let head_hash = hash block in
   make_letter_on_hash sk pk level head_hash letter
 
-let random_char () = Random.int (122 - 65) + 65 |> Char.chr
+(* let random_char () = Random.int (122 - 65) + 65 |> Char.chr *)
+let random_char () = Random.int 26 + 97 |> Char.chr
+
+let get_random_char letterbag =
+  let n = Random.int (Array.length letterbag) in
+  Array.get letterbag n;;
 
 let send_new_letter sk pk level store =
   (* Get blockchain head *)
@@ -17,13 +22,12 @@ let send_new_letter sk pk level store =
   Option.iter
     (fun head ->
       (* Create new random letter *)
-      Log.log_info "----------AUTHOR MADE CONSENSUS AND CHOSE HEAD : %a@." Word.pp head ;
       let letter =
         make_letter_on_block
           sk
           pk
           level
-          (Word.to_bigstring head)
+          (Word.to_bigstring head) (*Afficher head ici *)
           (random_char ())
       in
       (* Send letter *)
@@ -74,10 +78,10 @@ let run ?(max_iter = 0) () =
             (fun head ->
               if head = w then (
                 Log.log_info "Head updated to incoming word %a@." Word.pp w ;
-                send_new_letter sk pk !level store )
+                (*send_new_letter sk pk !level store *))
               else Log.log_info "incoming word %a not a new head@." Word.pp w)
             (Consensus.head ~level:(!level - 1) store)
-      | Messages.Next_turn p -> level := p
+      | Messages.Next_turn p -> level := p;  send_new_letter sk pk !level store;  (* 2 étapes :*)
       | Messages.Inject_letter _ | _ -> () ) ;
       loop (max_iter - 1) )
   in

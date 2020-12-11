@@ -176,7 +176,7 @@ let next_period pool =
     let got_all = Utils.included pool.registered injecters in
     if got_all then Log.log_info "Got all letters" ;
     if timeout then Log.log_info "Timeout" ;
-    if _non_empty_word_pool &&  got_all || timeout then (
+    if (*_non_empty_word_pool && *) (pool.current_period < 10) &&  got_all || timeout then (
       let current_period = pool.current_period + 1 in
       let next_period = current_period + 1 in
       Log.log_info_continue ": next turn (%d) !@." current_period ;
