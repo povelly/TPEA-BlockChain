@@ -6,8 +6,25 @@ let _ = ignore genesis
 
 (* end ignoring unused variables - to be removed *)
 
+(* gives the scrabble score of a letter *)
+let letter_score l : int =
+  match l.Letter.letter with
+    'k' | 'w' | 'x' | 'y' | 'z' -> 10
+    | 'j' | 'q' -> 8
+    | 'f' | 'h' | 'v' -> 4
+    | 'b' | 'c' | 'p' -> 3
+    | 'd' | 'm' | 'g' -> 2
+    | _ -> 1;;
+
+(* gives the total score of a letter list *)
+let rec word_score_aux llist score : int =
+ match llist with
+      | [] -> score
+      | l::tail -> word_score_aux tail (score + (letter_score l));;
+
 let word_score { word; _ } : int =
-  List.length word
+  word_score_aux word 0;;
+  
 
 let fitness st word =
   (* ignoring unused variables - to be removed *)
