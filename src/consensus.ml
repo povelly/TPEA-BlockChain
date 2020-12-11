@@ -7,11 +7,7 @@ let _ = ignore genesis
 (* end ignoring unused variables - to be removed *)
 
 let word_score { word; _ } : int =
-  (* ignoring unused variables - to be removed *)
-  ignore word ;
-  (* end ignoring unused variables - to be removed *)
-  (* TODO *)
-  assert false
+  List.length word
 
 let fitness st word =
   (* ignoring unused variables - to be removed *)
@@ -23,11 +19,27 @@ let fitness st word =
   assert false
 
 (* TODO *)
+let rec get_best words best : word =
+  match words with
+  | [] -> best
+  | x::xs -> if (word_score x) > (word_score best) then
+             get_best xs x else
+             get_best xs best
+
+let rec search_current_words wordList level acc : word list =
+  match wordList with
+  | [] -> acc
+  | x::xs -> if x.level = level then
+              search_current_words xs level (x::acc) else
+              search_current_words xs level acc
 
 let head ?level (st : Store.word_store) =
-  (* ignoring unused variables - to be removed *)
-  ignore level ;
-  ignore st ;
-  (* end ignoring unsed variables - to be removed *)
+match level with
+| None -> None
+| Some l -> if (l = 0) then Some genesis_word else
+   let wordSeq = Hashtbl.to_seq_values st.words_table in
+    match search_current_words (List.of_seq wordSeq) l [] with
+    | [] -> None
+    | first::current_words -> Some (get_best current_words first)
+
   (* TODO *)
-  assert false

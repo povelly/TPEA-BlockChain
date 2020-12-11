@@ -13,9 +13,11 @@ let random_char () = Random.int (122 - 65) + 65 |> Char.chr
 
 let send_new_letter sk pk level store =
   (* Get blockchain head *)
+  
   Option.iter
     (fun head ->
       (* Create new random letter *)
+      Log.log_info "----------AUTHOR MADE CONSENSUS AND CHOSE HEAD : %a@." Word.pp head ;
       let letter =
         make_letter_on_block
           sk
@@ -54,7 +56,6 @@ let run ?(max_iter = 0) () =
   (* Generate initial blocktree *)
   let store = Store.init_words () in
   Store.add_words store wordpool.words ;
-
   (* Create and send first letter *)
   send_new_letter sk pk wordpool.current_period store ;
 

@@ -84,6 +84,6 @@ let make ~letter ~head ~level ~pk ~sk =
   let author = pk in
   let msg = pre_bigstring ~letter ~head ~level ~author in
   let signature = sign ~sk ~msg in
-  { letter; head; level; author; signature }
+  { letter; level; head;  author; signature }
 
 let letter_to_bigstring = to_bigstring

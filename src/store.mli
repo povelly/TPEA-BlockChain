@@ -1,9 +1,15 @@
 open Word
 open Letter
 
-type letter_store
+type letter_store = {
+  check_sigs : bool;
+  letters_table : (Crypto.hash, Letter.t) Hashtbl.t;
+}
 
-type word_store
+type word_store = {
+  check_sigs : bool;
+  words_table : (Crypto.hash, word) Hashtbl.t;
+}
 
 val init_words : ?check_sigs:bool -> unit -> word_store
 

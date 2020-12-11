@@ -45,15 +45,13 @@ let check_signature w =
     ~msg:(pre_to_bigstring w)
     ~signature:w.signature
 
+
 let make ~(word : letter list) ~(head : hash) ~(level : int) ~(pk : Crypto.pk)
     ~(sk : Crypto.sk) =
-  (* ignoring unused variables - to be removed *)
-  ignore word ;
-  ignore head ;
-  ignore level ;
-  ignore pk ;
-  ignore sk ;
-  (* end ignoring unused variables - to be removed *)
-  failwith ("à programmer" ^ __LOC__)
+  let politician = pk in
+  let msg = pre_bigstring ~word ~level ~head ~politician in
+  let signature = sign ~sk ~msg in
+  {word; head; level; politician; signature}
+
 
 let hash word = Crypto.hash (to_bigstring word)
