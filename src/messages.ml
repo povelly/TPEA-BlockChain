@@ -173,7 +173,7 @@ let message_of_yojson msg =
   ||? ([%of_yojson: inject_raw_op_msg] >|> inject_raw_op_to_message)
   |> snd
 
-let receive ?(verbose = true) in_ch : (message, string) result =
+let receive ?(verbose = false) in_ch : (message, string) result =
   let () = if verbose then Log.log_info "receiving Message.@." in
   let () = if verbose then Log.log_info "reading size.@." in
   let len = Utils.read_int in_ch in
@@ -204,7 +204,7 @@ let receive_async ?(verbose = true) in_ch : (message, string) result Lwt.t =
   Yojson.Safe.from_string (Bytes.to_string buf)
   |> message_of_yojson |> Lwt.return
 
-let send ?(verbose = true) msg out_ch =
+let send ?(verbose = false) msg out_ch =
   let () = if verbose then Log.log_info "Sending message %a@." pp_message msg in
   let str =
     message_to_yojson msg |> Yojson.Safe.to_string |> Bytes.unsafe_of_string

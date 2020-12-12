@@ -118,7 +118,7 @@ let test ?(hard = false) () =
   let () = send_some getpool in
   let () = receive ~check:(check_inject_letter ~hard message) () in
 
-  let politicien = Politicien.{ pk; sk } in
+  let politicien = Politicien.{ pk; sk;score=0 } in
   let letters =
     List.map (Author.make_letter_on_hash sk pk 0 Constants.genesis) ['a'; 'b']
   in

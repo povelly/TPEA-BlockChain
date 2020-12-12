@@ -43,25 +43,38 @@ let fitness st word =
 (*returns the highest scoring word from a word list *)
 let rec get_best words best : word =
   match words with
-  | [] -> Log.log_info "WORD CHOSEN ---------------- %a blablablabla@." Word.pp best;best
+  | [] -> best
   | x::xs -> if (word_score x) > (word_score best) then
              get_best xs x else
              get_best xs best
 
 (* gives a list of words from the given period *)
-let rec search_current_words wordList level acc : word list =
+let rec same_period_words wordList level res : word list =
   match wordList with
-  | [] -> acc
+  | [] -> res
   | x::xs -> if x.level = level then
-              search_current_words xs level (x::acc) else
-              search_current_words xs level acc
+              same_period_words xs level (x::res) else
+              same_period_words xs level res
+
+(* gives the highest period word *)
+let rec get_newest_word wordlist newest: word =
+  match wordlist with
+  | [] -> newest
+  | w::ws -> if w.level > newest.level then get_newest_word ws w else get_newest_word ws newest
+
 
 (* returns the word (option) that should be chooser as head *)
 let head ?level (st : Store.word_store) =
 match level with
 | None -> None
 | Some l -> if (l = 0) then Some genesis_word else
-   let wordSeq = Hashtbl.to_seq_values st.words_table in
-    match search_current_words (List.of_seq wordSeq) l [] with
-    | [] -> Some genesis_word
-    | first::current_words -> Some (get_best current_words first)
+   let wordlist = List.of_seq (Hashtbl.to_seq_values st.words_table) in    
+    match wordlist with
+    | [] -> Log.log_info "Aucun mot dans le store\n"; Some genesis_word (* s'il n'y a pas de mot depuis le début, le head est toujours genesisword *)
+    | x::xs -> let newest = get_newest_word xs x in
+                if newest.level = 0 then Some genesis_word
+                (* la  listes des mots de la periode la plus élevé concaténé au head référencé par ces mots *)
+                else let possible_heads = (Hashtbl.find st.words_table newest.head)::(same_period_words wordlist newest.level []) in
+                let current_head = (get_best possible_heads newest) in
+                Some current_head
+                (* verifier quand meme que le mot est valide !!!!!!!!!!!!!!!!!!!!!!!!!! notemment parce qu'il peut etre trop ancien*)
