@@ -15,8 +15,11 @@ let bouchon () =
   true
 
 let rec create_word paquet mot taille =
-  Log.log_info "----------On fait une iteration de create_word \n";
-  if List.length mot >= taille then mot 
+  
+  if List.length mot >= taille then begin
+   (Log.log_info "--------Mot créé de taille %d!\n" taille);
+    mot;
+    end
   else
     let element_tire = List.nth paquet (Random.int (List.length paquet)) in
     create_word (List.find_all (fun x -> x != element_tire) paquet) (element_tire :: mot) taille
@@ -31,6 +34,13 @@ let rec f_bonnes leetterpool headhash res =
     else f_bonnes xs headhash res
 ;;
 
+let rec only_one_per_auth leetterpool auteurs sortie =
+  match leetterpool with
+  | [] -> sortie
+  | x::xs -> if List.mem x.Letter.author auteurs
+  then only_one_per_auth xs auteurs sortie
+  else only_one_per_auth xs ((x.Letter.author)::auteurs) (x::sortie)
+
 (*Transforme une liste de letters en liste de chars*) 
 let rec charlist_fro_letters pool acc = 
   match pool with  
@@ -39,8 +49,8 @@ let rec charlist_fro_letters pool acc =
 ;;
 
 let create_valid_word leetterpool periode = 
-  let bonnes = f_bonnes leetterpool periode [] in
-  Log.log_info "Tentative de creation de mot avec %d lettres\n" (List.length bonnes);
+  let bonnes = only_one_per_auth (f_bonnes leetterpool periode []) [] [] in
+  Log.log_info "%d lettres disponibles\n" (List.length bonnes);
   if List.length bonnes > 3 then
   let rec aux pool nb = 
     match nb with
@@ -98,6 +108,8 @@ let run ?(max_iter = 0) () =
   (* Generate public/secret keys *)
   Log.log_info "Generation de la clef prive/publique\n" ;
    let (pk, sk) = Crypto.genkeys () in
+   let politicien_score = ref 0 in
+
   (* Get initial wordpool *)
   Log.log_info "Recuperation du wordpool\n" ;
   let getpool = Messages.Get_full_wordpool in
@@ -116,6 +128,24 @@ let run ?(max_iter = 0) () =
       | _ -> wait_for_wordpool ()
   in    
   let wordpool = wait_for_wordpool () in
+
+
+
+  
+(* 
+let rec get_my_words wordpool res : word list =
+  match wordpool with
+  | [] -> res
+  | x::xs -> if x.politician != pk
+            then get_latest_word xs res
+            else x::res
+
+let rec get_latest_word wordlist lateset: word =
+  match wordlist with
+  | [] -> newest
+  | w::ws -> if w.level > lateset.level
+            then get_latest_word ws w
+            else get_latest_word ws newest *)
 
   (* Generate initial blocktree *)
   Log.log_info "Generation du blockarbre\n" ;
@@ -146,12 +176,37 @@ let run ?(max_iter = 0) () =
 
   Client_utils.send_some Messages.Listen ;
 
+  let get_latest_word wordpool : word = 
+      let rec aux wpool best =
+        match wpool with  
+        |[] -> best  
+        |x::xs -> if ((best.Word.politician <> pk) && (x.Word.politician = pk))
+        then aux xs x 
+        else aux xs best in 
+      let rec aux2 wpool best = 
+        match wpool with  
+        | [] -> best  
+        | x::xs -> if ((x.Word.politician = pk) && (x.Word.level > best.Word.level) )
+          then  aux2 xs x 
+          else aux2 xs best in      
+      aux2 wordpool (aux wordpool (List.nth wordpool 0))   
+    in
+(*
+  let liste2 liste = 
+    let rec aux liste acc =
+      match liste with  
+      | [] -> acc 
+      | ()
+
+*)
+
   (*  main loop *)
   (*failwith ("à programmer" ^ __LOC__)*)
   let level = ref wordpool.current_period in
   let rec loop max_iter =
-    if max_iter = 0 then ()
+    if max_iter = 0 then Log.log_success "This is the end... du politicien, c'est important" 
     else (
+      
       ( match Client_utils.receive () with
       (* le politicien doit savoir s'il y a une nouvelle head parce qu'il devra changer ses lettres// Pas sur *)
       (*| Messages.Inject_word w ->
@@ -165,22 +220,36 @@ let run ?(max_iter = 0) () =
                 (* Mon propre mot a peut-etre ete ajouté, je dois calculer mon score! *)
               else Log.log_info "incoming word %a not a new head@.\n" Word.pp w)
             (Consensus.head ~level:(!level - 1) store)*)
-      | Messages.Next_turn p -> (* Attention: Detail des lettres qui doublent *)
-      level := p ;
+      | Messages.Next_turn _ -> (* Attention: Detail des lettres qui doublent *)
         Client_utils.send_some (Messages.Get_letterpool_since !level);
         let lpool = wait_for_letterpool () in
         Store.add_letters st.letter_store lpool.letters;
-        
-        send_new_word !level st
-      | Messages.Inject_letter _ | _ -> () ) ; 
+        level := lpool.Messages.current_period ;
+        send_new_word !level st;
+        (*Mettre a jour le word store -> maybe un get wordpool*)
+        Client_utils.send_some (Messages.Get_full_wordpool);
+        let wpool = wait_for_wordpool () in
+        Store.add_words st.word_store wpool.words;
+        if (List.length (List.map snd wpool.words)) <> 0 
+        then
+        let w = get_latest_word (List.map snd wpool.words) in
+        Option.iter
+            (fun head ->
+              if head = w 
+              then  (politicien_score := (!politicien_score + (Consensus.word_score head));
+              Log.log_success "Score de du politicien : %d\n" !politicien_score ;))
+            (Consensus.head ~level:(!level - 1) st.word_store)
+      | Messages.Inject_letter _ | _ -> () );
       loop (max_iter - 1) )
   in
-  loop max_iter
+  loop max_iter;
+  Log.log_success "Score final du politicien : %d\n" !politicien_score
 
 let _ =
   let main =
     Random.self_init () ;
     let () = Client_utils.connect () in
-    run ~max_iter:(-1) ()
+    run ~max_iter:(20) ()
   in
   main
+

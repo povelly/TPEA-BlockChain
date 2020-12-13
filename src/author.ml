@@ -18,8 +18,8 @@ let make_letter_on_block sk pk level block letter : letter =
 let random_char () = Random.int 26 + 97 |> Char.chr
 
 let get_random_char leetterbag =
-  let n = Random.int (Array.length leetterbag) in
-  Array.get leetterbag n;;
+  let n = Random.int (List.length leetterbag) in
+  List.nth leetterbag n;;
 
   (* 
   let get_random_char leetterbag =
@@ -30,7 +30,7 @@ let get_random_char leetterbag =
       Array.get leetterbag n;;
   *)
 
-let send_new_letter sk pk level store =
+let send_new_letter sk pk level store letter_bag =
   (* Get blockchain head *)
   
   Option.iter
@@ -42,7 +42,7 @@ let send_new_letter sk pk level store =
           pk
           level
           (Word.to_bigstring head) 
-          (random_char ())  (*get_random_char !letter_bag  *) (* +suppression dans la letter bag *)
+          (get_random_char letter_bag)     (*(random_char ()*)
       in
       (* Send letter *)
       let message = Messages.Inject_letter letter in
@@ -52,7 +52,7 @@ let send_new_letter sk pk level store =
 let run ?(max_iter = 0) () =
   (* Generate public/secret keys *)
   let (pk, sk) = Crypto.genkeys () in
-
+  let author_score = ref 0 in
   (* Register to the server *)
   let reg_msg = Messages.Register pk in
   Client_utils.send_some reg_msg ;
@@ -68,9 +68,8 @@ let run ?(max_iter = 0) () =
       | Messages.Letters_bag letterbag -> letterbag
       | _ -> wait_for_letterbag ()
   in    
-  let letterbag = wait_for_letterbag () in
+  let letter_bag = wait_for_letterbag () in
 
-  ignore letterbag;
 
   (* Get initial wordpool *)
   let getpool = Messages.Get_full_wordpool in
@@ -84,6 +83,18 @@ let run ?(max_iter = 0) () =
   in
   *)
 
+  let update_author_score head : int =
+    let w = head.Word.word in 
+      let rec compute_score w score =
+        match w with
+        | [] -> score 
+        |x::xs -> if x.author = pk 
+          then compute_score xs (score + (Consensus.letter_score x)) 
+          else compute_score xs (score)
+      in 
+    compute_score w 0
+  in
+
   let rec wait_for_wordpool (): Messages.wordpool =
     match Client_utils.receive () with
       | Messages.Full_wordpool wordpool -> wordpool
@@ -91,15 +102,13 @@ let run ?(max_iter = 0) () =
   in    
   let wordpool = wait_for_wordpool () in
 
-  let auth : author = { letter_bag = letterbag; score=0 } in
-
-  ignore auth; 
+  (* let auth : author = { letter_bag = letterbag; score=0 } in *)
 
   (* Generate initial blocktree *)
   let store = Store.init_words () in
   Store.add_words store wordpool.words ;
   (* Create and send first letter *)
-  send_new_letter sk pk wordpool.current_period store ;
+  send_new_letter sk pk wordpool.current_period store letter_bag;
 
   (* start listening to server messages *)
   Client_utils.send_some Messages.Listen ;
@@ -107,7 +116,7 @@ let run ?(max_iter = 0) () =
   (* start main loop *)
   let level = ref wordpool.current_period in
   let rec loop max_iter =
-    if max_iter = 0 then ()
+    if max_iter = 0 then Log.log_success "FIN de l'auteur"
     else (
       ( match Client_utils.receive () with
       | Messages.Inject_word w ->
@@ -116,20 +125,24 @@ let run ?(max_iter = 0) () =
             (fun head ->
               if head = w then (
                 Log.log_success "Head updated to incoming word %a@." Word.pp w ;
-                (* Incrémenter le score ici *)
-                (*send_new_letter sk pk !level store *))
+                author_score := (!author_score + (update_author_score head));
+                Log.log_success "Score de l'auteur : %d\n" !author_score ;
+                (*send_new_letter sk pk !level store *)
+                )
               else Log.log_info "incoming word %a not a new head@." Word.pp w)
             (Consensus.head ~level:(!level - 1) store)
-      | Messages.Next_turn p -> level := p;  send_new_letter sk pk !level store;  (* 2 étapes :*)
+      | Messages.Next_turn p -> level := p;  send_new_letter sk pk !level store letter_bag;  (* 2 étapes :*)
       | Messages.Inject_letter _ | _ -> () ) ;
       loop (max_iter - 1) )
   in
-  loop max_iter
+  loop max_iter;
+  Log.log_success "Score final de l'auteur : %d\n" !author_score
 
 let _ =
   let main =
     Random.self_init () ;
     let () = Client_utils.connect () in
-    run ~max_iter:(-1) () (* Ici nombre de tours avant afficher les resultats *)
+    run ~max_iter: (20) () (* Ici nombre de messages avant d'afficher les resultats *)
+
   in
   main
