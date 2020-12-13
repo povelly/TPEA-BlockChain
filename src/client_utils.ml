@@ -14,7 +14,7 @@ let receive ?check () =
   | Some t -> (
       match t with
       | Ok msg ->
-          Log.log_info "Received %a@." Messages.pp_message msg ;
+          (* Log.log_info "Received %a@." Messages.pp_message msg ; *)
           Utils.unopt_map ~default:() (fun f -> f msg) check ;
           msg
       | Error s -> failwith (Format.sprintf "Reception error %s@." s) )

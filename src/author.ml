@@ -56,7 +56,7 @@ let run ?(max_iter = 0) () =
   (* Register to the server *)
   let reg_msg = Messages.Register pk in
   Client_utils.send_some reg_msg ;
-
+  Unix.sleep 3;
   (* drop provided letter_bag *)
   (*
   ( match Client_utils.receive () with

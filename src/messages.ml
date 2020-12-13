@@ -185,7 +185,7 @@ let receive ?(verbose = false) in_ch : (message, string) result =
   in
   Yojson.Safe.from_string (Bytes.to_string buf) |> message_of_yojson
 
-let receive_async ?(verbose = true) in_ch : (message, string) result Lwt.t =
+let receive_async ?(verbose = false) in_ch : (message, string) result Lwt.t =
   let%lwt () =
     if verbose then Log.log_info "receiving Message.@." ;
     Lwt.return_unit
@@ -204,7 +204,7 @@ let receive_async ?(verbose = true) in_ch : (message, string) result Lwt.t =
   Yojson.Safe.from_string (Bytes.to_string buf)
   |> message_of_yojson |> Lwt.return
 
-let send ?(verbose = false) msg out_ch =
+let send ?(verbose = true) msg out_ch =
   let () = if verbose then Log.log_info "Sending message %a@." pp_message msg in
   let str =
     message_to_yojson msg |> Yojson.Safe.to_string |> Bytes.unsafe_of_string

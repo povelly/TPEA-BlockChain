@@ -50,7 +50,7 @@ let rec charlist_fro_letters pool acc =
 
 let create_valid_word leetterpool periode = 
   let bonnes = only_one_per_auth (f_bonnes leetterpool periode []) [] [] in
-  Log.log_info "%d lettres disponibles\n" (List.length bonnes);
+  Log.log_info "%d lettres valides disponibles\n" (List.length bonnes);
   if List.length bonnes > 3 then
   let rec aux pool nb = 
     match nb with
@@ -129,24 +129,6 @@ let run ?(max_iter = 0) () =
   in    
   let wordpool = wait_for_wordpool () in
 
-
-
-  
-(* 
-let rec get_my_words wordpool res : word list =
-  match wordpool with
-  | [] -> res
-  | x::xs -> if x.politician != pk
-            then get_latest_word xs res
-            else x::res
-
-let rec get_latest_word wordlist lateset: word =
-  match wordlist with
-  | [] -> newest
-  | w::ws -> if w.level > lateset.level
-            then get_latest_word ws w
-            else get_latest_word ws newest *)
-
   (* Generate initial blocktree *)
   Log.log_info "Generation du blockarbre\n" ;
   let storeword = Store.init_words () in
@@ -191,20 +173,12 @@ let rec get_latest_word wordlist lateset: word =
           else aux2 xs best in      
       aux2 wordpool (aux wordpool (List.nth wordpool 0))   
     in
-(*
-  let liste2 liste = 
-    let rec aux liste acc =
-      match liste with  
-      | [] -> acc 
-      | ()
-
-*)
 
   (*  main loop *)
   (*failwith ("à programmer" ^ __LOC__)*)
   let level = ref wordpool.current_period in
   let rec loop max_iter =
-    if max_iter = 0 then Log.log_success "This is the end... du politicien, c'est important" 
+    if max_iter = 0 then ()
     else (
       
       ( match Client_utils.receive () with
@@ -237,7 +211,7 @@ let rec get_latest_word wordlist lateset: word =
             (fun head ->
               if head = w 
               then  (politicien_score := (!politicien_score + (Consensus.word_score head));
-              Log.log_success "Score de du politicien : %d\n" !politicien_score ;))
+              Log.log_success "Mon mot a été accepté comme head ! Score de du politicien : %d\n" !politicien_score ;))
             (Consensus.head ~level:(!level - 1) st.word_store)
       | Messages.Inject_letter _ | _ -> () );
       loop (max_iter - 1) )
@@ -249,7 +223,7 @@ let _ =
   let main =
     Random.self_init () ;
     let () = Client_utils.connect () in
-    run ~max_iter:(20) ()
+    run ~max_iter:(15) ()
   in
   main
 
