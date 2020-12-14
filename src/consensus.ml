@@ -21,7 +21,7 @@ let word_score { word; _ } : int =
   word_score_aux word 0;;
   
   
-(* ??????????????? sert probablement si on n'utilise plus le serveur
+(*
 PoW : fitness
 La règle de consensus consiste à choisir la chaîne de blocs
 valides la plus longue.
@@ -63,7 +63,10 @@ let rec get_newest_word wordlist newest: word =
   | w::ws -> if w.level > newest.level then get_newest_word ws w else get_newest_word ws newest
 
 
-(* returns the word (option) that should be chooser as head *)
+(* returns the word that should be choosen as head
+la head est choisie en choisissant le mot de meilleur score
+parmi les mots les plus récents et l'actuelle head
+*)
 let head ?level (st : Store.word_store) =
 match level with
 | None -> None
@@ -72,9 +75,9 @@ match level with
     match wordlist with
     | [] -> Log.log_info "Aucun mot dans le store\n"; Some genesis_word (* s'il n'y a pas de mot depuis le début, le head est toujours genesisword *)
     | x::xs -> let newest = get_newest_word xs x in
-                if newest.level = 0 then Some genesis_word
-                (* la  listes des mots de la periode la plus élevé concaténé au head référencé par ces mots *)
-                else let possible_heads = (Hashtbl.find st.words_table newest.head)::(same_period_words wordlist newest.level []) in
-                let current_head = (get_best possible_heads newest) in
-                Some current_head
-                (* verifier quand meme que le mot est valide !!!!!!!!!!!!!!!!!!!!!!!!!!*)
+               if newest.level = 0
+                then Some genesis_word
+                else  (* la  listes des mots de la periode la plus élevée concaténée au head référencé par ces mots *)
+                  let possible_heads = (Hashtbl.find st.words_table newest.head)::(same_period_words wordlist newest.level []) in
+                  let current_head = (get_best possible_heads newest) in
+                  Some current_head

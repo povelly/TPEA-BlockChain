@@ -58,10 +58,7 @@ let run ?(max_iter = 0) () =
   Client_utils.send_some reg_msg ;
   Unix.sleep 3;
   (* drop provided letter_bag *)
-  (*
-  ( match Client_utils.receive () with
-  | Messages.Letters_bag _ -> () (*l -> letter_bag := l *)
-  | _ -> assert false ) ; *)
+
 
   let rec wait_for_letterbag (): char list =
     match Client_utils.receive () with
@@ -75,13 +72,6 @@ let run ?(max_iter = 0) () =
   let getpool = Messages.Get_full_wordpool in
   Client_utils.send_some getpool ;
 
-  (*
-  let wordpool =
-    match Client_utils.receive () with
-    | Messages.Full_wordpool wordpool -> wordpool
-    | _ -> assert false (*  Ici gerer correctement la réponse*)
-  in
-  *)
 
   let update_author_score head : int =
     let w = head.Word.word in 
@@ -102,7 +92,6 @@ let run ?(max_iter = 0) () =
   in    
   let wordpool = wait_for_wordpool () in
 
-  (* let auth : author = { letter_bag = letterbag; score=0 } in *)
 
   (* Generate initial blocktree *)
   let store = Store.init_words () in
@@ -116,7 +105,7 @@ let run ?(max_iter = 0) () =
   (* start main loop *)
   let level = ref wordpool.current_period in
   let rec loop max_iter =
-    if max_iter = 0 then Log.log_success "FIN de l'auteur"
+    if max_iter = 0 then Log.log_success "FIN de l'auteur\n"
     else (
       ( match Client_utils.receive () with
       | Messages.Inject_word w ->
@@ -127,7 +116,6 @@ let run ?(max_iter = 0) () =
                 Log.log_success "Head updated to incoming word %a@." Word.pp w ;
                 author_score := (!author_score + (update_author_score head));
                 Log.log_success "Score de l'auteur : %d\n" !author_score ;
-                (*send_new_letter sk pk !level store *)
                 )
               else Log.log_info "incoming word %a not a new head@." Word.pp w)
             (Consensus.head ~level:(!level - 1) store)
